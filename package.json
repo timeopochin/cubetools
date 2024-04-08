@@ -1,8 +1,13 @@
 {
-  "dependencies": {
-    "three": "^0.163.0"
-  },
-  "devDependencies": {
-    "vite": "^5.2.8"
-  }
+	"dependencies": {
+		"gh-pages": "^6.1.1",
+		"three": "^0.163.0"
+	},
+	"devDependencies": {
+		"vite": "^5.2.8"
+	},
+	"scripts": {
+		"build": "vite build",
+		"preview": "vite preview"
+	}
 }
