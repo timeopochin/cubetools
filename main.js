@@ -277,7 +277,7 @@ let playing = false;
 	//nextCorner();
 //});
 
-document.body.addEventListener("keyup", () => {
+document.body.addEventListener("keyup", (e) => {
 	if (playing) {
 		switch (e.key) {
 			case " ":
