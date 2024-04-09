@@ -272,10 +272,10 @@ function nextCorner() {
 
 let playing = false;
 
-document.body.addEventListener("click", () => {
-	playing = true;
-	nextCorner();
-});
+//document.body.addEventListener("click", () => {
+	//playing = true;
+	//nextCorner();
+//});
 
 document.body.addEventListener("keyup", () => {
 	if (playing) {
