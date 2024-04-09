@@ -35,20 +35,25 @@ const stickerColours = [
 ].map((c) => new THREE.Color(c));
 
 // Material
-const pieceMaterial = new THREE.MeshToonMaterial({ color: 0x0 });
+//const pieceMaterial = new THREE.MeshToonMaterial({ color: 0x0 });
+const pieceMaterial = new THREE.MeshStandardMaterial({ color: 0x0 });
 
 // Ligths
 for (const l of [
-	//{ x:  6, y:  6, z:  6, c: 0xaaaaff, s: 200 },
-	//{ x: -6, y: -6, z: -6, c: 0xffaaaa, s: 200 },
-	//{ x:  8, y:  8, z: -8, c: 0x5555ff, s: 200 },
-	//{ x: -8, y: -8, z:  8, c: 0xff5555, s: 200 },
-	{ x: 6, y: 6, z: 6, c: 0xaaaaff, s: 150 },
+	/* for toon material
+	{ x:  6, y:  6, z:  6, c: 0xaaaaff, s: 150 },
 	{ x: -6, y: -6, z: -6, c: 0xffaaaa, s: 150 },
-	{ x: 8, y: 8, z: -8, c: 0x5555ff, s: 200 },
-	{ x: 8, y: -8, z: 8, c: 0xff5555, s: 200 },
-	{ x: -8, y: -8, z: 8, c: 0xff5555, s: 200 },
-	{ x: -8, y: 8, z: 8, c: 0x5555ff, s: 200 },
+	{ x:  8, y:  8, z: -8, c: 0x5555ff, s: 200 },
+	{ x:  8, y: -8, z:  8, c: 0xff5555, s: 200 },
+	{ x: -8, y: -8, z:  8, c: 0xff5555, s: 200 },
+	{ x: -8, y:  8, z:  8, c: 0x5555ff, s: 200 },
+	*/
+	{ x:  6, y:  6, z:  6, c: 0xddddff, s: 150 },
+	{ x: -6, y: -6, z: -6, c: 0xffdddd, s: 150 },
+	{ x:  8, y:  8, z: -8, c: 0xaaaaff, s: 200 },
+	{ x:  8, y: -8, z:  8, c: 0xffaaaa, s: 200 },
+	{ x: -8, y: -8, z:  8, c: 0xffaaaa, s: 200 },
+	{ x: -8, y:  8, z:  8, c: 0xaaaaff, s: 200 },
 ]) {
 	const pointLight = new THREE.PointLight(l.c, l.s, 1000);
 	scene.add(pointLight);
@@ -113,7 +118,8 @@ function createCube() {
 		for (let j = 0; j < 4; j++) {
 
 			const setupSticker = (sticker) => {
-				sticker.children[0].material = new THREE.MeshToonMaterial({ color: stickerColours[i] });
+				//sticker.children[0].material = new THREE.MeshToonMaterial({ color: stickerColours[i] });
+				sticker.children[0].material = new THREE.MeshStandardMaterial({ color: stickerColours[i] });
 				sticker.targetColour = stickerColours[i];
 				sticker.solvedColour = stickerColours[i];
 				sticker.children[1].material = pieceMaterial;
@@ -266,7 +272,12 @@ function nextCorner() {
 
 let playing = false;
 
-document.body.addEventListener("keyup", (e) => {
+document.body.addEventListener("click", () => {
+	playing = true;
+	nextCorner();
+});
+
+document.body.addEventListener("keyup", () => {
 	if (playing) {
 		switch (e.key) {
 			case " ":
