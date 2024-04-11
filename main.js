@@ -34,6 +34,7 @@ window.addEventListener("resize", () => {
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableZoom = false;
 controls.enablePan = false;
+controls.dampingFactor = 0.25;
 controls.enableDamping = true;
 
 // Colours
@@ -163,6 +164,7 @@ function createCube() {
 				//sticker.children[0].material = new THREE.MeshToonMaterial({ color: stickerColours[i] });
 				sticker.children[0].material = new THREE.MeshStandardMaterial({
 					color: stickerColours[i],
+					//roughness: 0.3,
 				});
 				//sticker.targetColour = stickerColours[i];
 				sticker.solvedColour = stickerColours[i];
@@ -314,8 +316,22 @@ function setModePreview() {
 	}
 }
 
+let resetTimeout = setTimeout(() => {
+	if (!playing && !orbit) {
+		controls.autoRotate = true;
+	}
+}, 500);
+
 function reset() {
 	orbit = false;
+	if (resetTimeout) {
+		clearTimeout(resetTimeout);
+	}
+	resetTimeout = setTimeout(() => {
+		if (!playing && !orbit) {
+			controls.autoRotate = true;
+		}
+	}, 500);
 	controls.enableRotate = true;
 	playing = false;
 	setModePreview();
@@ -324,6 +340,7 @@ function reset() {
 
 	document.getElementById("top-indicator").textContent =
 		`Press ${startLetter.toUpperCase()} to start`;
+	document.getElementById("reset-scheme").hidden = true;
 	document.getElementById("bottom-indicator").textContent =
 		"Press SPACE to change mode";
 
@@ -447,6 +464,7 @@ document.body.addEventListener("keyup", (e) => {
 				"Press SPACE to exit";
 			playing = true;
 			controls.enableRotate = false;
+			controls.autoRotate = false;
 			positionCounter = 20;
 			setPiecesGray();
 
@@ -483,21 +501,23 @@ document.body.addEventListener("keyup", (e) => {
 });
 
 let orbit = false;
+let mouseDown = false;
 
-renderer.domElement.addEventListener("mousedown", () => {
+renderer.domElement.addEventListener("mousedown", (e) => {
 	mouseDown = true;
+	pointerDown.x = e.clientX;
+	pointerDown.y = e.clientY;
 	if (!playing) {
 		orbit = true;
+		controls.autoRotate = false;
 		setPiecesSolved();
-		document.getElementById("top-indicator").textContent = "";
+		document.getElementById("top-indicator").textContent = "Scheme editor";
+		document.getElementById("reset-scheme").hidden = false;
 		document.getElementById("bottom-indicator").textContent =
 			"Press SPACE to go back";
 		return;
 	}
 });
-
-let mouseDown = false;
-let cancelClick = false;
 
 const colourPicker = document.getElementById("colour-picker");
 
@@ -505,7 +525,11 @@ function updateColours() {
 	for (let i = 0; i < stickers.length; i++) {
 		stickers[i].solvedColour = stickerColours[Math.floor(i / 9)];
 	}
-	setPiecesSolved();
+	if (orbit) {
+		setPiecesSolved();
+		return;
+	}
+	setModePreview();
 }
 
 colourPicker.addEventListener("change", (e) => {
@@ -518,10 +542,12 @@ colourPicker.addEventListener("change", (e) => {
 	localStorage.setItem("colourScheme", JSON.stringify(colours));
 });
 
-renderer.domElement.addEventListener("mouseup", () => {
+renderer.domElement.addEventListener("mouseup", (e) => {
 	mouseDown = false;
-	if (cancelClick) {
-		cancelClick = false;
+	if (
+		Math.abs(pointerDown.x - e.clientX) > 10 ||
+		Math.abs(pointerDown.y - e.clientY) > 10
+	) {
 		return;
 	}
 	const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
@@ -534,6 +560,9 @@ renderer.domElement.addEventListener("mouseup", () => {
 	}
 });
 
+document
+	.getElementById("reset-scheme")
+	.addEventListener("keyup", (e) => e.preventDefault());
 document.getElementById("reset-scheme").addEventListener("click", () => {
 	if (window.confirm("Are you sure you want to reset to the default scheme?")) {
 		resetColours();
@@ -543,11 +572,9 @@ document.getElementById("reset-scheme").addEventListener("click", () => {
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
+const pointerDown = new THREE.Vector2();
 
 window.addEventListener("pointermove", (event) => {
-	if (mouseDown) {
-		cancelClick = true;
-	}
 	pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
 	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 });
@@ -564,39 +591,42 @@ function getMouseStickerIndex() {
 	return intersects.map((intersect) => intersect.object.index);
 }
 
+const rotateSpeed = 0.15;
+
+function slerpPosition() {
+	cube.quaternion.slerp(positions[positionCounter].cube, rotateSpeed);
+	camera.position.set(0, 0, 0);
+	camera.quaternion.slerp(positions[positionCounter].camera, rotateSpeed);
+	camera.translateZ(30);
+}
+
 function animate() {
 	requestAnimationFrame(animate);
-	let rotateSpeed = 0.15;
-	let colorSpeed = 0.15;
+	const colorSpeed = 0.15;
 
 	if (!orbit) {
-		cube.quaternion.slerp(positions[positionCounter].cube, rotateSpeed);
-		camera.position.set(0, 0, 0);
-		camera.quaternion.slerp(positions[positionCounter].camera, rotateSpeed);
-		camera.translateZ(30);
-
-		for (const sticker of stickers) {
-			sticker.children[0].material.color.lerp(sticker.targetColour, colorSpeed);
+		if (playing || !controls.autoRotate) {
+			slerpPosition();
+		} else {
+			camera.position.set(0, 0, 0);
+			camera.translateZ(30);
 		}
 	} else {
-		controls.update();
-
 		const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
-
 		for (let i = 0; i < stickers.length; i++) {
-			if (!cancelClick && i === index) {
-				stickers[i].children[0].material.color.lerp(
-					stickerColours[6],
-					colorSpeed,
-				);
+			if (i === index && !mouseDown) {
+				stickers[i].targetColour = stickerColours[6];
 			} else {
-				stickers[i].children[0].material.color.lerp(
-					stickers[i].targetColour,
-					colorSpeed,
-				);
+				stickers[i].targetColour = stickers[i].solvedColour;
 			}
 		}
 	}
+
+	for (const sticker of stickers) {
+		sticker.children[0].material.color.lerp(sticker.targetColour, colorSpeed);
+	}
+
+	controls.update();
 
 	//cameraWrapper.quaternion.slerp(positions[positionCounter].camera, 0.2);
 	//cube.rotation.x += 0.05 * (positions[positionCounter]);
