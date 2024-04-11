@@ -2,6 +2,8 @@ import * as THREE from "three";
 import WebGL from "three/addons/capabilities/WebGL.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
+import { FontLoader } from "three/addons/loaders/FontLoader.js";
 
 // Scene
 const scene = new THREE.Scene();
@@ -127,8 +129,18 @@ loader.load(
 					(object) => {
 						basecenter = object;
 
-						// Create cube
-						createCube();
+						// Font
+						const fontLoader = new FontLoader();
+
+						fontLoader.load(
+							"./fonts/optimer_bold.typeface.json",
+							function (font) {
+								// Create cube
+								createCube(font);
+							},
+							loadingFunction,
+							errorFunction,
+						);
 					},
 					loadingFunction,
 					errorFunction,
@@ -142,7 +154,9 @@ loader.load(
 	errorFunction,
 );
 
-function createCube() {
+const letters = [];
+
+function createCube(font) {
 	// Each side
 	for (let i = 0; i < 6; i++) {
 		const side = new THREE.Group();
@@ -187,6 +201,39 @@ function createCube() {
 			if (j === 3) {
 				const center = basecenter.clone();
 				setupSticker(center);
+			}
+		}
+	}
+
+	let abcIndex = 0;
+	for (let i = 0; i < 6; i++) {
+		for (let x = -1; x < 2; x++) {
+			for (let y = -1; y < 2; y++) {
+				if (x === 0 && y === 0) {
+					continue;
+				}
+
+				// Letter
+				const abc = "AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ";
+				const letter = new TextGeometry(abc[abcIndex], {
+					font: font,
+					size: 0.8,
+					depth: 0.1,
+				});
+				letter.translate(1.867 * x - 0.4, 1.867 * y - 0.4, 2.8);
+				if (i < 4) {
+					const ry = -(Math.PI * i) / 2;
+					letter.rotateY(ry);
+				} else {
+					const rx = Math.PI * (i - 3.5);
+					letter.rotateX(rx);
+				}
+				const letterMesh = new THREE.Mesh(letter, pieceMaterial);
+				letters.push(letterMesh);
+				letters.push(letterMesh);
+				scene.add(letterMesh);
+
+				abcIndex++;
 			}
 		}
 	}
