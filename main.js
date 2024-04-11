@@ -8,6 +8,7 @@ import { FontLoader } from "three/addons/loaders/FontLoader.js";
 // Scene
 const scene = new THREE.Scene();
 const grayColour = new THREE.Color(0x0b0b0b);
+const inputtingColour = new THREE.Color(0x00ffff);
 scene.background = grayColour;
 
 // Camera
@@ -53,22 +54,74 @@ function resetColours() {
 	localStorage.setItem("colourScheme", JSON.stringify(defaultColours));
 	stickerColours = defaultColours.map((c) => new THREE.Color(c));
 }
+
 if (!localStorage.hasOwnProperty("colourScheme")) {
 	resetColours();
+}
+
+let letterScheme;
+
+// Letters
+function resetLetters() {
+	console.log("resetting");
+	localStorage.setItem(
+		"letterScheme",
+		"hxswotuglpvkaernbqfdicmjrhntlfjpgxkuovswedicmbqa",
+	);
+	letterScheme = localStorage.getItem("letterScheme");
+}
+
+if (!localStorage.hasOwnProperty("letterScheme")) {
+	resetLetters();
+} else {
+	letterScheme = localStorage.getItem("letterScheme");
 }
 
 let stickerColours = JSON.parse(localStorage.getItem("colourScheme")).map(
 	(c) => new THREE.Color(c),
 );
 
+function updateLetters() {
+	for (const sticker of stickers) {
+		//console.log(letter.parent);
+		//console.log(letters[letterScheme[schemeIndexes[letter.parent.index]]]);
+
+		console.log(sticker.parent.children[0].children);
+		if (sticker.index === undefined) {
+			continue;
+		}
+		sticker.parent.children[0].children[sticker.index % 9].geometry =
+			letters[letterScheme[schemeIndexes[sticker.index]]];
+	}
+}
+
 // Material
 //const pieceMaterial = new THREE.MeshBasicMaterial({ color: 0x0 });
 //const pieceMaterial = new THREE.MeshToonMaterial({ color: 0x0 });
-const pieceMaterial = new THREE.MeshStandardMaterial({ color: 0x0 });
+const pieceMaterial = new THREE.MeshStandardMaterial({
+	color: 0x0,
+	//wireframe: true,
+});
 const letterMaterial = new THREE.MeshStandardMaterial({
 	color: 0x0,
 	visible: false,
+	//wireframe: true,
 });
+
+/*
+const uiMaterial = new THREE.MeshStandardMaterial({ color: 0xffaadd });
+
+function generateTextMesh(pos, fontOptions, text) {
+	const textGeometry = new TextGeometry(text, fontOptions);
+	textGeometry.computeBoundingBox();
+	const center = textGeometry.boundingBox.getCenter(new THREE.Vector3());
+	const offsetX = center.x;
+	const offsetY = center.y;
+	const offsetZ = center.z;
+	textGeometry.translate(pos.x - offsetX, pos.y - offsetY, pos.z - offsetZ);
+	return new THREE.Mesh(textGeometry, uiMaterial);
+}
+*/
 
 // Ligths
 for (const l of [
@@ -137,10 +190,14 @@ loader.load(
 						const fontLoader = new FontLoader();
 
 						fontLoader.load(
-							"./fonts/optimer_bold.typeface.json",
-							function (font) {
+							//"./fonts/optimer_bold.typeface.json",
+							"./fonts/columbia_serial_bold.json",
+							(font) => {
 								// Create cube
 								createCube(font);
+								//const top = createUI("top", "This is a test");
+								//console.log(top);
+								//scene.add(top);
 							},
 							loadingFunction,
 							errorFunction,
@@ -158,16 +215,120 @@ loader.load(
 	errorFunction,
 );
 
-const letters = [];
+/*
+function createUI(name, text) {
+	const poss = {
+		top: { x: 0, y: 4, z: 0 },
+		bottom: { x: 0, y: 0, z: 0 },
+		left: { x: 0, y: 0, z: 0 },
+	};
+	const fontOptionss = {
+		top: {
+			font: globalFont,
+			size: 0.8,
+			depth: 0.1,
+			bevelEnabled: true,
+			bevelThickness: 0.05,
+			bevelSize: 0.05,
+			bevelOffset: 0,
+			bevelSegments: 1,
+		},
+	};
+	return generateTextMesh(poss[name], fontOptionss[name], text);
+}
+*/
+
+//   0123456789
+//   ABCDEFGHIJ
+//
+// 1|0123456789
+//   KLMNOPQRST
+//
+// 2|0123
+//   LVWX
+//
+// CORNERS
+//
+//   0 1 2 3 4 5 6 7 8 9
+//   h x s w o t u g l p
+//
+// 1|0 1 2 3 4 5 6 7 8 9
+//   v k a e r n b q f d
+//
+//          |EDGES
+// 2|0 1 2 3|4 5 6 7 8 9
+//   i c m j|r h n t l f
+//
+// 3|0 1 2 3 4 5 6 7 8 9
+//   j p g x k u o v s w
+//
+// 4|0 1 2 3 4 5 6 7
+//   e d i c m b q a
+
+const letters = {};
+// prettier-ignore
+const schemeIndexes = [
+	 8, 28, 20, 42, 11, 34, 23, 30, undefined,
+	 9, 31, 22, 44, 15, 26,  4, 36, undefined,
+	 5, 27, 17, 46, 14, 24,  2, 38, undefined,
+	 0, 25, 13, 40, 18, 29,  7, 32, undefined,
+	 1, 33,  6, 35, 10, 37,  3, 39, undefined,
+	19, 41, 12, 47, 16, 45, 21, 43, undefined,
+];
+
+//const schemeIndexes = [
+//8, 34, 11, 28, 23, 42, 20, 30, 9, 36, 4, 31, 22, 26, 15, 44, 5, 38, 2, 27, 14,
+//46, 17, 24, 0, 32, 7, 25, 18, 40, 13, 29, 1, 39, 3, 33, 10, 35, 6, 37, 19, 43,
+//21, 41, 16, 47, 12, 45,
+//];
+
+// 0123456789
+// LKKLJIIJPO
+//
+// 0123456789
+// OPNMMNTSST
+//
+// 0123456789
+// RQQRHGGHFE
+//
+// 0123456789
+// EFXWWXVUUV
+//
+// 0123456789
+// DCCDBAAB";
 
 function createCube(font) {
+	for (const l of abc) {
+		const letter = new TextGeometry(l.toUpperCase(), {
+			font: font,
+			size: 0.8,
+			depth: 0.05,
+		});
+		letter.computeBoundingBox();
+		const center = letter.boundingBox.getCenter(new THREE.Vector3());
+		const offsetX = center.x;
+		const offsetY = center.y;
+		letter.translate(-offsetX, -offsetY, 2.8);
+		letters[l] = letter;
+	}
+
 	// Each side
 	//let abcIndex = 0;
-	let x = -1;
-	let y = -1;
+	const xy = [
+		{ x: -1, y: -1 },
+		{ x: -1, y: 0 },
+		{ x: -1, y: 1 },
+		{ x: 0, y: 1 },
+		{ x: 1, y: 1 },
+		{ x: 1, y: 0 },
+		{ x: 1, y: -1 },
+		{ x: 0, y: -1 },
+	];
 	for (let i = 0; i < 6; i++) {
 		const side = new THREE.Group();
 		cube.add(side);
+		const sideLetters = new THREE.Group();
+		side.add(sideLetters);
 
 		// Rotate side
 		if (i < 4) {
@@ -185,11 +346,13 @@ function createCube(font) {
 				//sticker.children[0].material = new THREE.MeshToonMaterial({ color: stickerColours[i] });
 				sticker.children[0].material = new THREE.MeshStandardMaterial({
 					color: stickerColours[i],
+					//wireframe: true,
 					//roughness: 0.3,
 				});
 				//sticker.targetColour = stickerColours[i];
 				sticker.solvedColour = stickerColours[i];
 				sticker.children[1].material = pieceMaterial;
+				//sticker.index = stickers.length;
 				side.add(sticker);
 				stickers.push(sticker);
 
@@ -200,21 +363,21 @@ function createCube(font) {
 
 			// Letter
 
-			function attachLetter(sticker, index) {
+			function attachLetter(index) {
 				//const abc = "AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ";
+				/*
 				const abc = "LKKLJIIJPOOPNMMNTSSTRQQRHGGHFEEFXWWXVUUVDCCDBAAB";
 				const letter = new TextGeometry(abc[index], {
 					font: font,
 					size: 0.8,
-					depth: 0.1,
-					bevelEnabled: true,
-					bevelThickness: 0.05,
-					bevelSize: 0.05,
-					bevelOffset: 0,
-					bevelSegments: 1,
+					depth: 0.05,
+					//bevelEnabled: true,
+					//bevelThickness: 0.05,
+					//bevelSize: 0.05,
+					//bevelOffset: 0,
+					//bevelSegments: 1,
 				});
 				letter.computeBoundingBox();
-				console.log(letter.boundingBox.getCenter(new THREE.Vector3()));
 				const center = letter.boundingBox.getCenter(new THREE.Vector3());
 				const offsetX = center.x;
 				const offsetY = center.y;
@@ -222,37 +385,38 @@ function createCube(font) {
 				const letterMesh = new THREE.Mesh(letter, letterMaterial);
 				letters.push(letterMesh);
 				side.add(letterMesh);
+				*/
+				//console.log(letters, letterScheme[schemeIndexes[index]]);
+				//console.log(letters[letterScheme[schemeIndexes[index]]]);
+				//console.log("test", index);
+				const letter = new THREE.Mesh(
+					letters[letterScheme[schemeIndexes[index]]],
+					//schemeIndexes[index] < 24
+					//? letterMaterial
+					//: new THREE.MeshBasicMaterial({ color: 0xffaabb }),
+					letterMaterial,
+				);
+				//console.log(letterScheme[schemeIndexes[index]], letter);
+				const { x, y } = xy[index % 9];
+				letter.translateX(1.867 * x);
+				letter.translateY(1.867 * y);
+				letter.schemeIndex = schemeIndexes[index];
+				sideLetters.add(letter);
 			}
 
 			// Corner
 			const corner = basecorner.clone();
 			setupSticker(corner, false);
-			attachLetter(corner, i * 8 + j * 2);
-			corner.rotateZ(-(Math.PI * (j + 1)) / 2);
-
-			x++;
-			if (x === 2) {
-				x = -1;
-				y++;
-				if (y === 2) y = -1;
-			} else if (y === 0 && x === 0) {
-				x++;
-			}
+			corner.index = i * 9 + j * 2;
+			attachLetter(corner.index);
+			corner.rotateZ(-(Math.PI * j) / 2);
 
 			// Edge
 			const edge = baseedge.clone();
 			setupSticker(edge, false);
-			attachLetter(corner, i * 8 + j * 2 + 1);
+			edge.index = i * 9 + j * 2 + 1;
+			attachLetter(edge.index);
 			edge.rotateZ(-(Math.PI * j) / 2);
-
-			x++;
-			if (x === 2) {
-				x = -1;
-				y++;
-				if (y === 2) y = -1;
-			} else if (y === 0 && x === 0) {
-				x++;
-			}
 
 			// Center
 			if (j === 3) {
@@ -329,14 +493,14 @@ function randomRange(min, max) {
 }
 
 const cornersData = [
-	{ stickers: [0, 29, 51], position: 6 },
-	{ stickers: [2, 49, 9], position: 7 },
-	{ stickers: [4, 15, 38], position: 3 },
-	{ stickers: [6, 36, 31], position: 2 },
-	{ stickers: [18, 11, 47], position: 5 },
-	{ stickers: [20, 45, 27], position: 4 },
-	{ stickers: [22, 33, 42], position: 0 },
-	{ stickers: [24, 40, 13], position: 1 },
+	{ stickers: [24, 27, 36], position: 0 },
+	{ stickers: [18, 42, 15], position: 1 },
+	{ stickers: [0, 38, 33], position: 2 },
+	{ stickers: [6, 9, 40], position: 3 },
+	{ stickers: [22, 47, 29], position: 4 },
+	{ stickers: [20, 13, 49], position: 5 },
+	{ stickers: [2, 31, 45], position: 6 },
+	{ stickers: [4, 51, 11], position: 7 },
 ];
 
 const edgesData = [
@@ -357,9 +521,6 @@ const edgesData = [
 	{ stickers: [12, 50], position: 18 },
 	{ stickers: [21, 48], position: 19 },
 ];
-
-const cornersScheme = "hxswotuglpvkaernbqfdicmj";
-const edgesScheme = "rhntlfjpgxkuovswedicmbqa";
 
 let currentCorner;
 let currentEdge;
@@ -408,21 +569,21 @@ function reset() {
 	playing = false;
 	setModePreview();
 
-	startLetter = edges ? cornersScheme[21] : edgesScheme[19];
+	startLetter = edges ? letterScheme[43] : letterScheme[21];
 
 	document.getElementById("top-indicator").textContent =
 		`Press ${startLetter.toUpperCase()} to start`;
-	document.getElementById("reset-scheme").hidden = true;
+	document.getElementById("reset-buttons").hidden = true;
 	document.getElementById("bottom-indicator").textContent =
 		"Press SPACE to change mode";
 
-	currentCorner = { ...cornersData[1] };
+	currentCorner = { ...cornersData[7] };
 	currentCorner.twist = 0;
-	currentCorner.answer = cornersScheme[21].toUpperCase();
+	currentCorner.answer = letterScheme[21].toUpperCase();
 
 	currentEdge = { ...edgesData[9] };
 	currentEdge.flip = true;
-	currentEdge.answer = edgesScheme[19].toUpperCase();
+	currentEdge.answer = letterScheme[43].toUpperCase();
 }
 
 function getRandomCorner() {
@@ -453,7 +614,7 @@ function nextCorner() {
 	positionCounter = currentCorner.position;
 
 	const relativeTwist = (currentCorner.twist + twist) % 3;
-	const answer = cornersScheme[corner.position * 3 + relativeTwist];
+	const answer = letterScheme[corner.position * 3 + relativeTwist];
 
 	currentCorner = { ...corner };
 	currentCorner.twist = relativeTwist;
@@ -482,7 +643,7 @@ function nextEdge() {
 	positionCounter = currentEdge.position;
 
 	const relativeFlip = currentEdge.flip != flip;
-	const answer = edgesScheme[(edge.position - 8) * 2 + relativeFlip];
+	const answer = letterScheme[24 + (edge.position - 8) * 2 + relativeFlip];
 
 	currentEdge = { ...edge };
 	currentEdge.flip = relativeFlip;
@@ -497,7 +658,43 @@ let edges = false;
 
 let timeouts = [];
 
+const abc = "abcdefghijklmnopqrstluvwxyz";
+
 document.body.addEventListener("keyup", (e) => {
+	//console.log(e.key, selectedSticker);
+	if (selectedSticker && abc.includes(e.key)) {
+		selectedSticker.parent.parent.children[0].children[
+			selectedSticker.index % 9
+		].geometry = letters[e.key];
+
+		const index = schemeIndexes[selectedSticker.index];
+		//console.log(selectedSticker.index, index, letterScheme[index]);
+		//
+
+		//console.log(letterScheme);
+		//console.log(letterScheme.slice(0, index), letterScheme.slice(index + 1));
+
+		letterScheme =
+			letterScheme.slice(0, index) + e.key + letterScheme.slice(index + 1);
+
+		localStorage.setItem("letterScheme", letterScheme);
+		console.log(localStorage.getItem("letterScheme"));
+
+		//console.log(index, letterScheme[index]);
+		//console.log(
+		//index,
+		//selectedSticker,
+		//letterScheme,
+		//old,
+		//letterScheme === old,
+		//);
+		//console.log(letterScheme);
+		//console.log(letterScheme === old);
+
+		selectedSticker = null;
+		return;
+	}
+
 	if (playing) {
 		if (e.key === " ") {
 			for (const timeout of timeouts) {
@@ -515,7 +712,7 @@ document.body.addEventListener("keyup", (e) => {
 			} else {
 				nextCorner();
 			}
-		} else if ("abcdefghijklmnopqrstlvwx".includes(e.key)) {
+		} else if (abc.includes(e.key)) {
 			scene.background = new THREE.Color(0x862121);
 			setTimeout(() => (scene.background = grayColour), 200);
 		}
@@ -585,7 +782,7 @@ renderer.domElement.addEventListener("mousedown", (e) => {
 		controls.autoRotate = false;
 		setPiecesSolved();
 		document.getElementById("top-indicator").textContent = "Scheme editor";
-		document.getElementById("reset-scheme").hidden = false;
+		document.getElementById("reset-buttons").hidden = false;
 		document.getElementById("bottom-indicator").textContent =
 			"Press SPACE to go back";
 		return;
@@ -615,31 +812,67 @@ colourPicker.addEventListener("change", (e) => {
 	localStorage.setItem("colourScheme", JSON.stringify(colours));
 });
 
+let selectedSticker = null;
+
 renderer.domElement.addEventListener("mouseup", (e) => {
 	mouseDown = false;
 	if (
+		playing ||
 		Math.abs(pointerDown.x - e.clientX) > 10 ||
 		Math.abs(pointerDown.y - e.clientY) > 10
 	) {
 		return;
 	}
-	const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
-	if (index) {
+	//const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
+	selectedSticker = getMouseSticker();
+	if (!selectedSticker) {
+		return;
+	}
+
+	//if (index) {
+	if (selectedSticker.index % 9 === 8) {
 		colourPicker.focus();
 		//console.log(stickers[index].solvedColour.getHexString());
-		colourPicker.value = "#" + stickers[index].solvedColour.getHexString();
-		colourPicker.dataset.face = Math.floor(index / 9);
+		colourPicker.value =
+			"#" + stickers[selectedSticker.index].solvedColour.getHexString();
+		colourPicker.dataset.face = Math.floor(selectedSticker.index / 9);
 		colourPicker.click();
+		selectedSticker = null;
+		return;
+	}
+
+	selectedSticker.parent.targetColour = inputtingColour;
+
+	//const index = schemeIndexes[selectedSticker.index];
+	//console.log(selectedSticker.index, index, letterScheme[index]);
+	//letters[letterScheme[index]].translate(0, 0, 0.1);
+});
+
+document
+	.getElementById("reset-colour-scheme")
+	.addEventListener("keyup", (e) => e.preventDefault());
+document.getElementById("reset-colour-scheme").addEventListener("click", () => {
+	if (
+		window.confirm(
+			"Are you sure you want to reset to the default colour scheme?",
+		)
+	) {
+		resetColours();
+		updateColours();
 	}
 });
 
 document
-	.getElementById("reset-scheme")
+	.getElementById("reset-letter-scheme")
 	.addEventListener("keyup", (e) => e.preventDefault());
-document.getElementById("reset-scheme").addEventListener("click", () => {
-	if (window.confirm("Are you sure you want to reset to the default scheme?")) {
-		resetColours();
-		updateColours();
+document.getElementById("reset-letter-scheme").addEventListener("click", () => {
+	if (
+		window.confirm(
+			"Are you sure you want to reset to the default letter scheme?",
+		)
+	) {
+		resetLetters();
+		updateLetters();
 	}
 });
 
@@ -652,7 +885,7 @@ window.addEventListener("pointermove", (event) => {
 	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 });
 
-function getMouseStickerIndex() {
+function getMouseSticker() {
 	raycaster.setFromCamera(pointer, camera);
 	const intersects = raycaster.intersectObjects(
 		stickers.map((sticker, index) => {
@@ -661,7 +894,7 @@ function getMouseStickerIndex() {
 			return stickerWithIndex;
 		}),
 	);
-	return intersects.map((intersect) => intersect.object.index);
+	return intersects.length ? intersects[0].object : undefined;
 }
 
 const rotateSpeed = 0.15;
@@ -685,12 +918,16 @@ function animate() {
 			camera.translateZ(30);
 		}
 	} else {
-		const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
+		//const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
+		const object = getMouseSticker();
+		const index = object ? object.index : null;
 		for (let i = 0; i < stickers.length; i++) {
-			if (i === index && !mouseDown) {
-				stickers[i].targetColour = stickerColours[6];
-			} else {
-				stickers[i].targetColour = stickers[i].solvedColour;
+			if (!selectedSticker) {
+				if (i === index && !mouseDown) {
+					stickers[i].targetColour = stickerColours[6];
+				} else {
+					stickers[i].targetColour = stickers[i].solvedColour;
+				}
 			}
 		}
 	}

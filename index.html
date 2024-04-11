@@ -3,12 +3,15 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>Three Cube</title>
-		<link rel="stylesheet" href="style.css" />
+		<link rel="stylesheet" type="text/css" href="style.css" />
 	</head>
 	<body>
 		<p id="top-indicator" class="indicator"></p>
 		<p id="bottom-indicator" class="indicator"></p>
-		<button id="reset-scheme" hidden>Reset colour scheme</button>
+		<div id="reset-buttons">
+			<button id="reset-colour-scheme" hidden>Reset colours</button>
+			<button id="reset-letter-scheme" hidden>Reset lettering</button>
+		</div>
 		<input type="color" id="colour-picker" hidden />
 		<script type="module" src="/main.js"></script>
 	</body>
