@@ -1,12 +1,11 @@
 * {
 	padding: 0;
 	margin: 0;
-	font-family: LinBiolinum_R;
+	font-family: sans-serif;
 }
 
 .indicator {
 	position: absolute;
-	/*font-family: ColumbiaSerialBold;*/
 	color: #eebbbb;
 	margin: 1rem 0;
 }
