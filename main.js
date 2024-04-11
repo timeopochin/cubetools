@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import WebGL from "three/addons/capabilities/WebGL.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 // Scene
 const scene = new THREE.Scene();
@@ -28,6 +29,12 @@ window.addEventListener("resize", () => {
 	camera.updateProjectionMatrix();
 	renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Control
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.enableDamping = true;
 
 // Colours
 const stickerColours = [
@@ -178,7 +185,7 @@ function createCube() {
 let positionCounter = 20;
 //let positionCounter = 19;
 
-const positions = [
+let positions = [
 	{ x: 0.1, y: 1.2, z: -0.5 }, // DBL
 	{ x: 0.1, y: -1.2, z: 0.5 }, // DBR
 	{ x: -0.3, y: 0.3, z: 0.05 }, // DFL
@@ -203,8 +210,6 @@ const positions = [
 	{ x: 0.4, y: 0.0, z: 0.0 }, // UF
 	{ x: 0.4, y: -0.4, z: 0.1 }, // UR
 	{ x: 1.2, y: 0.2, z: -0.3 }, // UB
-
-	{ x: 0.3, y: -0.0, z: 0.0 }, // Neutral
 ].map((r) => {
 	const qcube = new THREE.Quaternion();
 	const qcamera = new THREE.Quaternion();
@@ -224,6 +229,16 @@ const positions = [
 	);
 	return { cube: qcube, camera: qcamera };
 });
+
+positions.push(
+	(() => {
+		const qcube = new THREE.Quaternion();
+		const qcamera = new THREE.Quaternion();
+		qcube.setFromEuler(new THREE.Euler(0, 0, 0));
+		qcamera.setFromEuler(new THREE.Euler((-0.3 * Math.PI) / 2, 0, 0));
+		return { cube: qcube, camera: qcamera };
+	})(),
+);
 
 function randomRange(min, max) {
 	return min + Math.floor(Math.random() * max);
@@ -273,10 +288,14 @@ function setPiecesGray() {
 	}
 }
 
-function setModePreview() {
+function setPiecesSolved() {
 	for (const sticker of stickers) {
 		sticker.targetColour = sticker.solvedColour;
 	}
+}
+
+function setModePreview() {
+	setPiecesSolved();
 	for (const pieceData of edges ? cornersData : edgesData) {
 		for (const i of pieceData.stickers) {
 			stickers[i].targetColour = stickerColours[6];
@@ -285,6 +304,9 @@ function setModePreview() {
 }
 
 function reset() {
+	orbit = false;
+	controls.enableRotate = true;
+	playing = false;
 	setModePreview();
 
 	startLetter = edges ? cornersScheme[21] : edgesScheme[19];
@@ -387,12 +409,11 @@ let timeouts = [];
 document.body.addEventListener("keyup", (e) => {
 	if (playing) {
 		if (e.key === " ") {
-			playing = false;
 			for (const timeout of timeouts) {
 				clearTimeout(timeout);
 			}
 			timeouts = [];
-			//positionCounter = 20;
+			positionCounter = 20;
 			reset();
 		} else if (
 			(e.key === currentCorner.answer && !edges) ||
@@ -410,11 +431,20 @@ document.body.addEventListener("keyup", (e) => {
 		return;
 	}
 
+	if (orbit) {
+		if (e.key === " ") {
+			reset();
+			("Press SPACE to go back");
+		}
+		return;
+	}
+
 	switch (e.key) {
 		case startLetter:
 			document.getElementById("bottom-indicator").textContent =
 				"Press SPACE to exit";
 			playing = true;
+			controls.enableRotate = false;
 			positionCounter = 20;
 			setPiecesGray();
 
@@ -450,6 +480,19 @@ document.body.addEventListener("keyup", (e) => {
 	}
 });
 
+let orbit = false;
+
+renderer.domElement.addEventListener("mousedown", () => {
+	if (!playing) {
+		orbit = true;
+		setPiecesSolved();
+		document.getElementById("top-indicator").textContent = "";
+		document.getElementById("bottom-indicator").textContent =
+			"Press SPACE to go back";
+		return;
+	}
+});
+
 function animate() {
 	const colorSpeed = 0.15;
 	const rotateSpeed = 0.15;
@@ -460,18 +503,15 @@ function animate() {
 		sticker.children[0].material.color.lerp(sticker.targetColour, colorSpeed);
 	}
 
-	//cube.quaternion.slerp(positions[positionCounter], 0.2);
-	if (playing) {
+	if (!orbit) {
 		cube.quaternion.slerp(positions[positionCounter].cube, rotateSpeed);
+		camera.position.set(0, 0, 0);
+		camera.quaternion.slerp(positions[positionCounter].camera, rotateSpeed);
+		camera.translateZ(30);
 	} else {
-		cube.rotateX(0.004);
-		cube.rotateY(0.007);
-		cube.rotateZ(-0.005);
+		controls.update();
 	}
 
-	camera.position.set(0, 0, 0);
-	camera.quaternion.slerp(positions[positionCounter].camera, rotateSpeed);
-	camera.translateZ(30);
 	//cameraWrapper.quaternion.slerp(positions[positionCounter].camera, 0.2);
 	//cube.rotation.x += 0.05 * (positions[positionCounter]);
 
