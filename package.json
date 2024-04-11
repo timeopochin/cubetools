@@ -9,5 +9,9 @@
 	"scripts": {
 		"build": "vite build",
 		"preview": "vite preview"
+	},
+	"prettier": {
+		"useTabs": true,
+		"bracketSameLine": true
 	}
 }

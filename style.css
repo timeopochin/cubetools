@@ -2,3 +2,21 @@
 	padding: 0;
 	margin: 0;
 }
+
+.indicator {
+	position: absolute;
+	width: 100%;
+	font-family: sans-serif;
+	color: #eebbbb;
+	margin: 1rem 0;
+}
+#top-indicator {
+	text-align: center;
+	font-weight: bold;
+	font-size: 4rem;
+}
+#bottom-indicator {
+	margin-left: 1rem;
+	font-size: 1.5rem;
+	bottom: 0;
+}
