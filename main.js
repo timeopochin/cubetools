@@ -37,15 +37,26 @@ controls.enablePan = false;
 controls.enableDamping = true;
 
 // Colours
-const stickerColours = [
-	0x00dd00, // Front
-	0xcc0000, // Right
-	0x2222dd, // Back
-	0xff7700, // Left
-	0xffff00, // Down
-	0xf6f6f6, // Up
-	0x333333, // Grayed out
-].map((c) => new THREE.Color(c));
+function resetColours() {
+	const defaultColours = [
+		0x00dd00, // Front
+		0xcc0000, // Right
+		0x2222dd, // Back
+		0xff7700, // Left
+		0xffff00, // Down
+		0xf6f6f6, // Up
+		0x333333, // Grayed out
+	];
+	localStorage.setItem("colourScheme", JSON.stringify(defaultColours));
+	stickerColours = defaultColours.map((c) => new THREE.Color(c));
+}
+if (!localStorage.hasOwnProperty("colourScheme")) {
+	resetColours();
+}
+
+let stickerColours = JSON.parse(localStorage.getItem("colourScheme")).map(
+	(c) => new THREE.Color(c),
+);
 
 // Material
 //const pieceMaterial = new THREE.MeshBasicMaterial({ color: 0x0 });
@@ -153,7 +164,7 @@ function createCube() {
 				sticker.children[0].material = new THREE.MeshStandardMaterial({
 					color: stickerColours[i],
 				});
-				sticker.targetColour = stickerColours[i];
+				//sticker.targetColour = stickerColours[i];
 				sticker.solvedColour = stickerColours[i];
 				sticker.children[1].material = pieceMaterial;
 				side.add(sticker);
@@ -387,22 +398,13 @@ function nextEdge() {
 	currentEdge = { ...edge };
 	currentEdge.flip = relativeFlip;
 	currentEdge.answer = answer;
+
+	console.log(answer);
 }
 
 let playing = false;
 //let playing = true;
 let edges = false;
-
-/*
-document.body.addEventListener("click", () => {
-	playing = true;
-	if (edges) {
-		nextEdge();
-	} else {
-		nextCorner();
-	}
-});
-*/
 
 let timeouts = [];
 
@@ -483,6 +485,7 @@ document.body.addEventListener("keyup", (e) => {
 let orbit = false;
 
 renderer.domElement.addEventListener("mousedown", () => {
+	mouseDown = true;
 	if (!playing) {
 		orbit = true;
 		setPiecesSolved();
@@ -493,23 +496,106 @@ renderer.domElement.addEventListener("mousedown", () => {
 	}
 });
 
-function animate() {
-	const colorSpeed = 0.15;
-	const rotateSpeed = 0.15;
+let mouseDown = false;
+let cancelClick = false;
 
-	requestAnimationFrame(animate);
+const colourPicker = document.getElementById("colour-picker");
 
-	for (const sticker of stickers) {
-		sticker.children[0].material.color.lerp(sticker.targetColour, colorSpeed);
+function updateColours() {
+	for (let i = 0; i < stickers.length; i++) {
+		stickers[i].solvedColour = stickerColours[Math.floor(i / 9)];
 	}
+	setPiecesSolved();
+}
+
+colourPicker.addEventListener("change", (e) => {
+	const newColour = Number("0x" + e.target.value.slice(1));
+	const face = Number(e.target.dataset.face);
+	stickerColours[face] = new THREE.Color(newColour);
+	updateColours();
+	let colours = JSON.parse(localStorage.getItem("colourScheme"));
+	colours[face] = newColour;
+	localStorage.setItem("colourScheme", JSON.stringify(colours));
+});
+
+renderer.domElement.addEventListener("mouseup", () => {
+	mouseDown = false;
+	if (cancelClick) {
+		cancelClick = false;
+		return;
+	}
+	const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
+	if (index) {
+		colourPicker.focus();
+		//console.log(stickers[index].solvedColour.getHexString());
+		colourPicker.value = "#" + stickers[index].solvedColour.getHexString();
+		colourPicker.dataset.face = Math.floor(index / 9);
+		colourPicker.click();
+	}
+});
+
+document.getElementById("reset-scheme").addEventListener("click", () => {
+	if (window.confirm("Are you sure you want to reset to the default scheme?")) {
+		resetColours();
+		updateColours();
+	}
+});
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+window.addEventListener("pointermove", (event) => {
+	if (mouseDown) {
+		cancelClick = true;
+	}
+	pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+});
+
+function getMouseStickerIndex() {
+	raycaster.setFromCamera(pointer, camera);
+	const intersects = raycaster.intersectObjects(
+		stickers.map((sticker, index) => {
+			let stickerWithIndex = sticker.children[0];
+			stickerWithIndex.index = index;
+			return stickerWithIndex;
+		}),
+	);
+	return intersects.map((intersect) => intersect.object.index);
+}
+
+function animate() {
+	requestAnimationFrame(animate);
+	let rotateSpeed = 0.15;
+	let colorSpeed = 0.15;
 
 	if (!orbit) {
 		cube.quaternion.slerp(positions[positionCounter].cube, rotateSpeed);
 		camera.position.set(0, 0, 0);
 		camera.quaternion.slerp(positions[positionCounter].camera, rotateSpeed);
 		camera.translateZ(30);
+
+		for (const sticker of stickers) {
+			sticker.children[0].material.color.lerp(sticker.targetColour, colorSpeed);
+		}
 	} else {
 		controls.update();
+
+		const index = getMouseStickerIndex().filter((index) => index % 9 === 8)[0];
+
+		for (let i = 0; i < stickers.length; i++) {
+			if (!cancelClick && i === index) {
+				stickers[i].children[0].material.color.lerp(
+					stickerColours[6],
+					colorSpeed,
+				);
+			} else {
+				stickers[i].children[0].material.color.lerp(
+					stickers[i].targetColour,
+					colorSpeed,
+				);
+			}
+		}
 	}
 
 	//cameraWrapper.quaternion.slerp(positions[positionCounter].camera, 0.2);
