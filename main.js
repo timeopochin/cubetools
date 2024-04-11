@@ -207,7 +207,7 @@ loader.load(
 const letters = {};
 // prettier-ignore
 const schemeIndexes = [
-	 8, 28, 20, 42, 11, 34, 23, 30, undefined,
+	 8, 28, 20, 42, 23, 30, 11, 34, undefined,
 	 9, 31, 22, 44, 15, 26,  4, 36, undefined,
 	 5, 27, 17, 46, 14, 24,  2, 38, undefined,
 	 0, 25, 13, 40, 18, 29,  7, 32, undefined,
@@ -690,9 +690,7 @@ document
 	.addEventListener("keyup", (e) => e.preventDefault());
 document.getElementById("reset-colour-scheme").addEventListener("click", () => {
 	if (
-		window.confirm(
-			"Are you sure you want to reset to the default colours?",
-		)
+		window.confirm("Are you sure you want to reset to the default colours?")
 	) {
 		resetColours();
 		updateColours();
@@ -704,9 +702,7 @@ document
 	.addEventListener("keyup", (e) => e.preventDefault());
 document.getElementById("reset-letter-scheme").addEventListener("click", () => {
 	if (
-		window.confirm(
-			"Are you sure you want to reset to the default lettering?",
-		)
+		window.confirm("Are you sure you want to reset to the default lettering?")
 	) {
 		resetLetters();
 		updateLetters();
