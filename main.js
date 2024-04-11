@@ -65,6 +65,10 @@ let stickerColours = JSON.parse(localStorage.getItem("colourScheme")).map(
 //const pieceMaterial = new THREE.MeshBasicMaterial({ color: 0x0 });
 //const pieceMaterial = new THREE.MeshToonMaterial({ color: 0x0 });
 const pieceMaterial = new THREE.MeshStandardMaterial({ color: 0x0 });
+const letterMaterial = new THREE.MeshStandardMaterial({
+	color: 0x0,
+	visible: false,
+});
 
 // Ligths
 for (const l of [
@@ -158,6 +162,9 @@ const letters = [];
 
 function createCube(font) {
 	// Each side
+	//let abcIndex = 0;
+	let x = -1;
+	let y = -1;
 	for (let i = 0; i < 6; i++) {
 		const side = new THREE.Group();
 		cube.add(side);
@@ -171,7 +178,7 @@ function createCube(font) {
 
 		//for (let j = 0; j < 4; j++) {
 		for (let j = 0; j < 4; j++) {
-			const setupSticker = (sticker) => {
+			const setupSticker = (sticker, skipLetter) => {
 				//sticker.children[0].material = new THREE.MeshBasicMaterial({
 				//color: stickerColours[i],
 				//});
@@ -185,55 +192,72 @@ function createCube(font) {
 				sticker.children[1].material = pieceMaterial;
 				side.add(sticker);
 				stickers.push(sticker);
+
+				if (skipLetter) {
+					return;
+				}
 			};
+
+			// Letter
+
+			function attachLetter(sticker, index) {
+				//const abc = "AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ";
+				const abc = "LKKLJIIJPOOPNMMNTSSTRQQRHGGHFEEFXWWXVUUVDCCDBAAB";
+				const letter = new TextGeometry(abc[index], {
+					font: font,
+					size: 0.8,
+					depth: 0.1,
+					bevelEnabled: true,
+					bevelThickness: 0.05,
+					bevelSize: 0.05,
+					bevelOffset: 0,
+					bevelSegments: 1,
+				});
+				letter.computeBoundingBox();
+				console.log(letter.boundingBox.getCenter(new THREE.Vector3()));
+				const center = letter.boundingBox.getCenter(new THREE.Vector3());
+				const offsetX = center.x;
+				const offsetY = center.y;
+				letter.translate(1.867 * x - offsetX, 1.867 * y - offsetY, 2.8);
+				const letterMesh = new THREE.Mesh(letter, letterMaterial);
+				letters.push(letterMesh);
+				side.add(letterMesh);
+			}
 
 			// Corner
 			const corner = basecorner.clone();
-			setupSticker(corner);
+			setupSticker(corner, false);
+			attachLetter(corner, i * 8 + j * 2);
 			corner.rotateZ(-(Math.PI * (j + 1)) / 2);
+
+			x++;
+			if (x === 2) {
+				x = -1;
+				y++;
+				if (y === 2) y = -1;
+			} else if (y === 0 && x === 0) {
+				x++;
+			}
 
 			// Edge
 			const edge = baseedge.clone();
-			setupSticker(edge);
+			setupSticker(edge, false);
+			attachLetter(corner, i * 8 + j * 2 + 1);
 			edge.rotateZ(-(Math.PI * j) / 2);
+
+			x++;
+			if (x === 2) {
+				x = -1;
+				y++;
+				if (y === 2) y = -1;
+			} else if (y === 0 && x === 0) {
+				x++;
+			}
 
 			// Center
 			if (j === 3) {
 				const center = basecenter.clone();
-				setupSticker(center);
-			}
-		}
-	}
-
-	let abcIndex = 0;
-	for (let i = 0; i < 6; i++) {
-		for (let x = -1; x < 2; x++) {
-			for (let y = -1; y < 2; y++) {
-				if (x === 0 && y === 0) {
-					continue;
-				}
-
-				// Letter
-				const abc = "AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVVWWXXYYZZ";
-				const letter = new TextGeometry(abc[abcIndex], {
-					font: font,
-					size: 0.8,
-					depth: 0.1,
-				});
-				letter.translate(1.867 * x - 0.4, 1.867 * y - 0.4, 2.8);
-				if (i < 4) {
-					const ry = -(Math.PI * i) / 2;
-					letter.rotateY(ry);
-				} else {
-					const rx = Math.PI * (i - 3.5);
-					letter.rotateX(rx);
-				}
-				const letterMesh = new THREE.Mesh(letter, pieceMaterial);
-				letters.push(letterMesh);
-				letters.push(letterMesh);
-				scene.add(letterMesh);
-
-				abcIndex++;
+				setupSticker(center, true);
 			}
 		}
 	}
@@ -371,6 +395,7 @@ let resetTimeout = setTimeout(() => {
 
 function reset() {
 	orbit = false;
+	letterMaterial.visible = false;
 	if (resetTimeout) {
 		clearTimeout(resetTimeout);
 	}
@@ -556,6 +581,7 @@ renderer.domElement.addEventListener("mousedown", (e) => {
 	pointerDown.y = e.clientY;
 	if (!playing) {
 		orbit = true;
+		letterMaterial.visible = true;
 		controls.autoRotate = false;
 		setPiecesSolved();
 		document.getElementById("top-indicator").textContent = "Scheme editor";
