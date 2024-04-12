@@ -5,22 +5,102 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 
-// Scene
+// ThreeJS
 const scene = new THREE.Scene();
-const grayColour = new THREE.Color(0x0b0b0b);
-const inputtingColour = new THREE.Color(0x00ffff);
-scene.background = grayColour;
-
-// Camera
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+const loader = new OBJLoader();
 const camera = new THREE.PerspectiveCamera(
 	25,
 	window.innerWidth / window.innerHeight,
 	0.1,
 	1000,
 );
+const controls = new OrbitControls(camera, renderer.domElement);
+const grayColour = new THREE.Color(0x0b0b0b);
+const pieceMaterial = new THREE.MeshStandardMaterial({
+	color: 0x0,
+	roughness: 0.3,
+});
+const letterMaterial = new THREE.MeshStandardMaterial({
+	color: 0x000000,
+	//roughness: 0.4,
+	visible: false,
+});
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const pointerDown = new THREE.Vector2();
 
-// Renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+// DOM
+const colourPicker = document.getElementById("colour-picker");
+const topIndicator = document.getElementById("top-indicator");
+const bottomIndicator = document.getElementById("bottom-indicator");
+const resetButtons = document.getElementById("reset-buttons");
+
+// Constants
+const abc = "abcdefghijklmnopqrstluvwxyz";
+const rotateSpeed = 0.15;
+const times = {};
+const letters = {};
+
+//   CORNERS
+//   0 1 2 3 4 5 6 7 8 9
+//   h x s w o t u g l p
+//
+// 1|0 1 2 3 4 5 6 7 8 9
+//   v k a e r n b q f d
+//
+//          |EDGES
+// 2|0 1 2 3|4 5 6 7 8 9
+//   i c m j|r h n t l f
+//
+// 3|0 1 2 3 4 5 6 7 8 9
+//   j p g x k u o v s w
+//
+// 4|0 1 2 3 4 5 6 7
+//   e d i c m b q a
+
+// prettier-ignore
+const schemeIndexes = [
+	 8, 28, 20, 42, 23, 30, 11, 34, undefined,
+	 9, 31, 22, 44, 15, 26,  4, 36, undefined,
+	 5, 27, 17, 46, 14, 24,  2, 38, undefined,
+	 0, 25, 13, 40, 18, 29,  7, 32, undefined,
+	 1, 33,  6, 35, 10, 37,  3, 39, undefined,
+	19, 41, 12, 47, 16, 45, 21, 43, undefined,
+];
+
+// prettier-ignore
+const cornersData = [
+	{ stickers: [24, 27, 36], position: 0 },
+	{ stickers: [18, 42, 15], position: 1 },
+	{ stickers: [ 0, 38, 33], position: 2 },
+	{ stickers: [ 6,  9, 40], position: 3 },
+	{ stickers: [22, 47, 29], position: 4 },
+	{ stickers: [20, 13, 49], position: 5 },
+	{ stickers: [ 2, 31, 45], position: 6 },
+	{ stickers: [ 4, 51, 11], position: 7 },
+];
+
+// prettier-ignore
+const edgesData = [
+	{ stickers: [23, 28], position:  8 },
+	{ stickers: [14, 19], position:  9 },
+	{ stickers: [ 1, 32], position: 10 },
+	{ stickers: [ 5, 10], position: 11 },
+
+	{ stickers: [34, 37], position: 12 },
+	{ stickers: [ 7, 39], position: 13 },
+	{ stickers: [16, 41], position: 14 },
+	{ stickers: [25, 43], position: 15 },
+
+	{ stickers: [30, 46], position: 16 },
+	{ stickers: [ 3, 52], position: 17 },
+	{ stickers: [12, 50], position: 18 },
+	{ stickers: [21, 48], position: 19 },
+];
+
+scene.background = grayColour;
+
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -31,21 +111,66 @@ window.addEventListener("resize", () => {
 });
 
 // Control
-const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableZoom = false;
 controls.enablePan = false;
 controls.dampingFactor = 0.25;
 controls.enableDamping = true;
 
+/* Times
+ *
+ * {
+ * a: [3524, 5453, 1535],
+ * b: [3524, 5453, 1535],
+ * c: [3524, 5453, 1535],
+ * }
+ */
+
+/*
+function resetTime(c) {
+	times[c] = [];
+	localStorage.setItem("times-" + c, JSON.stringify(times));
+}
+/*
+
+/*
+function resetTimes() {
+	for (const c of abc) {
+		resetTime(c)
+	}
+}
+*/
+
+/*
+function loadTimes() {
+	for (const c of abc) {
+		times[c] = [];
+		if (!localStorage.hasOwnProperty("times-" + c)) {
+			resetTime();
+			return;
+		}
+		times = localStorage.getItem("times");
+	}
+}
+*/
+
+/*
+loadTimes();
+
+function addTime(letter, time) {
+	times[letter].push(time);
+	localStorage.setItem(JSON.stringify(times));
+}
+*/
+
 // Colours
 function resetColours() {
 	const defaultColours = [
-		0x00dd00, // Front
-		0xcc0000, // Right
-		0x2222dd, // Back
-		0xff7700, // Left
-		0xffff00, // Down
-		0xf6f6f6, // Up
+		0x009b48, // Front
+		0xb90000, // Right
+		0x0045ad, // Back
+		0xff5900, // Left
+		0xffd500, // Down
+		0xffffff, // Up
 		0x333333, // Grayed out
 	];
 	localStorage.setItem("colourScheme", JSON.stringify(defaultColours));
@@ -90,15 +215,6 @@ function updateLetters() {
 // Material
 //const pieceMaterial = new THREE.MeshStandardMaterial({ color: 0x0 });
 //const pieceMaterial = new THREE.MeshToonMaterial({ color: 0x0 });
-const pieceMaterial = new THREE.MeshStandardMaterial({
-	color: 0x0,
-	roughness: 0.3,
-});
-const letterMaterial = new THREE.MeshStandardMaterial({
-	color: 0x000000,
-	//roughness: 0.4,
-	visible: false,
-});
 
 // Ligths
 //const ambientLight = new THREE.AmbientLight(0xaaaaaa);
@@ -138,15 +254,17 @@ scene.add(cube);
 let stickers = [];
 
 // Loading OBJ files
-const loader = new OBJLoader();
 
 let basecorner;
 let baseedge;
 let basecenter;
 
-const loadingFunction = (xhr) =>
+function loadingFunction(xhr) {
 	console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
-const errorFunction = (error) => console.log(error);
+}
+function errorFunction(error) {
+	console.log(error);
+}
 
 // Load corner
 loader.load(
@@ -191,34 +309,6 @@ loader.load(
 	loadingFunction,
 	errorFunction,
 );
-
-//   CORNERS
-//   0 1 2 3 4 5 6 7 8 9
-//   h x s w o t u g l p
-//
-// 1|0 1 2 3 4 5 6 7 8 9
-//   v k a e r n b q f d
-//
-//          |EDGES
-// 2|0 1 2 3|4 5 6 7 8 9
-//   i c m j|r h n t l f
-//
-// 3|0 1 2 3 4 5 6 7 8 9
-//   j p g x k u o v s w
-//
-// 4|0 1 2 3 4 5 6 7
-//   e d i c m b q a
-
-const letters = {};
-// prettier-ignore
-const schemeIndexes = [
-	 8, 28, 20, 42, 23, 30, 11, 34, undefined,
-	 9, 31, 22, 44, 15, 26,  4, 36, undefined,
-	 5, 27, 17, 46, 14, 24,  2, 38, undefined,
-	 0, 25, 13, 40, 18, 29,  7, 32, undefined,
-	 1, 33,  6, 35, 10, 37,  3, 39, undefined,
-	19, 41, 12, 47, 16, 45, 21, 43, undefined,
-];
 
 function createCube(font) {
 	for (const l of abc) {
@@ -372,44 +462,19 @@ function randomRange(min, max) {
 	return min + Math.floor(Math.random() * max);
 }
 
-const cornersData = [
-	{ stickers: [24, 27, 36], position: 0 },
-	{ stickers: [18, 42, 15], position: 1 },
-	{ stickers: [0, 38, 33], position: 2 },
-	{ stickers: [6, 9, 40], position: 3 },
-	{ stickers: [22, 47, 29], position: 4 },
-	{ stickers: [20, 13, 49], position: 5 },
-	{ stickers: [2, 31, 45], position: 6 },
-	{ stickers: [4, 51, 11], position: 7 },
-];
-
-const edgesData = [
-	// F  R  B  L  D  U
-	// 1 10 19 28 37 46
-	{ stickers: [23, 28], position: 8 },
-	{ stickers: [14, 19], position: 9 },
-	{ stickers: [1, 32], position: 10 },
-	{ stickers: [5, 10], position: 11 },
-
-	{ stickers: [34, 37], position: 12 },
-	{ stickers: [7, 39], position: 13 },
-	{ stickers: [16, 41], position: 14 },
-	{ stickers: [25, 43], position: 15 },
-
-	{ stickers: [30, 46], position: 16 },
-	{ stickers: [3, 52], position: 17 },
-	{ stickers: [12, 50], position: 18 },
-	{ stickers: [21, 48], position: 19 },
-];
-
 let currentCorner;
 let currentEdge;
 let startLetter;
 
-function setPiecesGray() {
+function setPiecesGray(exclude = (i) => i % 9 === 8, alpha = 1.0) {
 	for (let i = 0; i < stickers.length; i++) {
-		if (i % 9 === 8) continue;
-		stickers[i].targetColour = stickerColours[6];
+		if (exclude(i)) {
+			continue;
+		}
+		stickers[i].targetColour = new THREE.Color(stickers[i].solvedColour).lerp(
+			stickerColours[6],
+			alpha,
+		);
 	}
 }
 
@@ -451,11 +516,9 @@ function reset() {
 
 	startLetter = edges ? letterScheme[43] : letterScheme[21];
 
-	document.getElementById("top-indicator").textContent =
-		`Press ${startLetter.toUpperCase()} to start`;
-	document.getElementById("reset-buttons").hidden = true;
-	document.getElementById("bottom-indicator").textContent =
-		"Press SPACE to change mode";
+	topIndicator.textContent = `Press ${startLetter.toUpperCase()} to start`;
+	resetButtons.hidden = true;
+	bottomIndicator.textContent = "Press SPACE to change mode";
 
 	currentCorner = { ...cornersData[7] };
 	currentCorner.twist = 0;
@@ -475,8 +538,7 @@ function getRandomEdge() {
 }
 
 function nextCorner() {
-	document.getElementById("top-indicator").textContent =
-		currentCorner.answer.toUpperCase();
+	topIndicator.textContent = currentCorner.answer.toUpperCase();
 
 	setPiecesGray();
 
@@ -504,8 +566,7 @@ function nextCorner() {
 }
 
 function nextEdge() {
-	document.getElementById("top-indicator").textContent =
-		currentEdge.answer.toUpperCase();
+	topIndicator.textContent = currentEdge.answer.toUpperCase();
 
 	setPiecesGray();
 
@@ -538,20 +599,26 @@ let edges = false;
 
 let timeouts = [];
 
-const abc = "abcdefghijklmnopqrstluvwxyz";
-
 document.body.addEventListener("keyup", (e) => {
-	if (selectedSticker && abc.includes(e.key)) {
-		selectedSticker.parent.parent.children[0].children[
-			selectedSticker.index % 9
-		].geometry = letters[e.key];
+	// Input
+	if (selectedSticker) {
+		if (abc.includes(e.key)) {
+			selectedSticker.parent.parent.children[0].children[
+				selectedSticker.index % 9
+			].geometry = letters[e.key];
 
-		const index = schemeIndexes[selectedSticker.index];
-		letterScheme =
-			letterScheme.slice(0, index) + e.key + letterScheme.slice(index + 1);
+			const index = schemeIndexes[selectedSticker.index];
+			letterScheme =
+				letterScheme.slice(0, index) + e.key + letterScheme.slice(index + 1);
 
-		localStorage.setItem("letterScheme", letterScheme);
-		selectedSticker = null;
+			localStorage.setItem("letterScheme", letterScheme);
+			selectedSticker = null;
+		} else {
+			selectedSticker = null;
+		}
+		setPiecesSolved();
+
+		bottomIndicator.textContent = "Press SPACE to go back";
 		return;
 	}
 
@@ -581,23 +648,22 @@ document.body.addEventListener("keyup", (e) => {
 
 	if (orbit) {
 		if (e.key === " ") {
+			inEditor = false;
 			reset();
-			("Press SPACE to go back");
 		}
 		return;
 	}
 
 	switch (e.key) {
 		case startLetter:
-			document.getElementById("bottom-indicator").textContent =
-				"Press SPACE to exit";
+			bottomIndicator.textContent = "Press SPACE to exit";
 			playing = true;
 			controls.enableRotate = false;
 			controls.autoRotate = false;
 			positionCounter = 20;
 			setPiecesGray();
 
-			document.getElementById("top-indicator").textContent = "Get ready...";
+			topIndicator.textContent = "Get ready...";
 			timeouts.push(
 				setTimeout(() => {
 					if (edges) {
@@ -617,26 +683,24 @@ document.body.addEventListener("keyup", (e) => {
 });
 
 let orbit = false;
+let inEditor = false;
 let mouseDown = false;
 
 renderer.domElement.addEventListener("mousedown", (e) => {
 	mouseDown = true;
 	pointerDown.x = e.clientX;
 	pointerDown.y = e.clientY;
-	if (!playing) {
+	if (!playing && !inEditor) {
 		orbit = true;
 		letterMaterial.visible = true;
 		controls.autoRotate = false;
 		setPiecesSolved();
-		document.getElementById("top-indicator").textContent = "Scheme editor";
-		document.getElementById("reset-buttons").hidden = false;
-		document.getElementById("bottom-indicator").textContent =
-			"Press SPACE to go back";
-		return;
+		topIndicator.textContent = "Scheme editor";
+		resetButtons.hidden = false;
+		bottomIndicator.textContent = "Press SPACE to go back";
+		inEditor = true;
 	}
 });
-
-const colourPicker = document.getElementById("colour-picker");
 
 function updateColours() {
 	for (let i = 0; i < stickers.length; i++) {
@@ -650,13 +714,19 @@ function updateColours() {
 }
 
 colourPicker.addEventListener("change", (e) => {
+	if (!selectedSticker) {
+		return;
+	}
 	const newColour = Number("0x" + e.target.value.slice(1));
-	const face = Number(e.target.dataset.face);
+	const face = Math.floor(selectedSticker.parent.index / 9);
 	stickerColours[face] = new THREE.Color(newColour);
-	updateColours();
+
 	let colours = JSON.parse(localStorage.getItem("colourScheme"));
 	colours[face] = newColour;
 	localStorage.setItem("colourScheme", JSON.stringify(colours));
+
+	updateColours();
+	setPiecesSolved();
 });
 
 let selectedSticker = null;
@@ -668,25 +738,31 @@ renderer.domElement.addEventListener("mouseup", (e) => {
 		Math.abs(pointerDown.x - e.clientX) > 10 ||
 		Math.abs(pointerDown.y - e.clientY) > 10
 	) {
-		selectedSticker = null;
 		return;
 	}
+
+	// Rayacst
 	selectedSticker = getMouseSticker();
+
+	// No sticker
 	if (!selectedSticker) {
+		bottomIndicator.textContent = "Press SPACE to go back";
+		setPiecesSolved();
 		return;
 	}
 
 	if (selectedSticker.index % 9 === 8) {
-		colourPicker.focus();
+		// Center sticker
 		colourPicker.value =
 			"#" + stickers[selectedSticker.index].solvedColour.getHexString();
-		colourPicker.dataset.face = Math.floor(selectedSticker.index / 9);
 		colourPicker.click();
-		selectedSticker = null;
-		return;
+	} else {
+		// Letter sticker
+		bottomIndicator.textContent = "Press A-Z to change";
 	}
 
-	selectedSticker.parent.targetColour = inputtingColour;
+	setPiecesGray((i) => i === selectedSticker.index, 0.9);
+	selectedSticker.parent.targetColour = selectedSticker.parent.solvedColour;
 });
 
 document
@@ -713,10 +789,6 @@ document.getElementById("reset-letter-scheme").addEventListener("click", () => {
 	}
 });
 
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-const pointerDown = new THREE.Vector2();
-
 window.addEventListener("pointermove", (event) => {
 	pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
 	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -733,8 +805,6 @@ function getMouseSticker() {
 	);
 	return intersects.length ? intersects[0].object : undefined;
 }
-
-const rotateSpeed = 0.15;
 
 function slerpPosition() {
 	cube.quaternion.slerp(positions[positionCounter].cube, rotateSpeed);
@@ -755,6 +825,7 @@ function animate() {
 			camera.translateZ(30);
 		}
 	} else {
+		/* gray on hover
 		const object = getMouseSticker();
 		const index = object ? object.index : null;
 		for (let i = 0; i < stickers.length; i++) {
@@ -766,6 +837,7 @@ function animate() {
 				}
 			}
 		}
+		*/
 	}
 
 	for (const sticker of stickers) {
