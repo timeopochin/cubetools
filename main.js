@@ -88,30 +88,35 @@ function updateLetters() {
 }
 
 // Material
-//const pieceMaterial = new THREE.MeshBasicMaterial({ color: 0x0 });
+//const pieceMaterial = new THREE.MeshStandardMaterial({ color: 0x0 });
 //const pieceMaterial = new THREE.MeshToonMaterial({ color: 0x0 });
 const pieceMaterial = new THREE.MeshStandardMaterial({
 	color: 0x0,
+	roughness: 0.3,
 });
 const letterMaterial = new THREE.MeshStandardMaterial({
-	color: 0x0,
+	color: 0x000000,
+	//roughness: 0.4,
 	visible: false,
 });
 
 // Ligths
+//const ambientLight = new THREE.AmbientLight(0xaaaaaa);
+//scene.add(ambientLight);
+
 for (const l of [
 	// for toon material
-	//{ x:  6, y:  6, z:  6, c: 0xaaaaff, s: 150 },
-	//{ x: -6, y: -6, z: -6, c: 0xffaaaa, s: 150 },
-	//{ x:  8, y:  8, z: -8, c: 0x5555ff, s: 200 },
-	//{ x:  8, y: -8, z:  8, c: 0xff5555, s: 200 },
-	//{ x: -8, y: -8, z:  8, c: 0xff5555, s: 200 },
-	//{ x: -8, y:  8, z:  8, c: 0x5555ff, s: 200 },
+	//{ x: 6, y: 6, z: 6, c: 0xccccff, s: 150 },
+	//{ x: -6, y: -6, z: -6, c: 0xffcccc, s: 150 },
+	//{ x: 8, y: 8, z: -8, c: 0xaaaaff, s: 200 },
+	//{ x: 8, y: -8, z: 8, c: 0xffaaaa, s: 200 },
+	//{ x: -8, y: -8, z: 8, c: 0xffaaaa, s: 200 },
+	//{ x: -8, y: 8, z: 8, c: 0xaaaaff, s: 200 },
 
 	{ x: 6, y: 6, z: 6, c: 0xddddff, s: 180 },
 	{ x: -6, y: -6, z: -6, c: 0xffdddd, s: 180 },
-	{ x: 8, y: 8, z: -8, c: 0xaaaaff, s: 240 },
-	{ x: 8, y: -8, z: 8, c: 0xffaaaa, s: 240 },
+	{ x: 8, y: 8, z: -8, c: 0xffaaaa, s: 240 },
+	{ x: 8, y: -8, z: 8, c: 0xaaaaff, s: 240 },
 	{ x: -8, y: -8, z: 8, c: 0xffaaaa, s: 240 },
 	{ x: -8, y: 8, z: 8, c: 0xaaaaff, s: 240 },
 ]) {
@@ -257,9 +262,7 @@ function createCube(font) {
 		//for (let j = 0; j < 4; j++) {
 		for (let j = 0; j < 4; j++) {
 			const setupSticker = (sticker, skipLetter) => {
-				sticker.children[0].material = new THREE.MeshStandardMaterial({
-					color: stickerColours[i],
-				});
+				sticker.children[0].material = new THREE.MeshBasicMaterial();
 				sticker.solvedColour = stickerColours[i];
 				sticker.children[1].material = pieceMaterial;
 				side.add(sticker);
@@ -665,6 +668,7 @@ renderer.domElement.addEventListener("mouseup", (e) => {
 		Math.abs(pointerDown.x - e.clientX) > 10 ||
 		Math.abs(pointerDown.y - e.clientY) > 10
 	) {
+		selectedSticker = null;
 		return;
 	}
 	selectedSticker = getMouseSticker();
@@ -766,6 +770,10 @@ function animate() {
 
 	for (const sticker of stickers) {
 		sticker.children[0].material.color.lerp(sticker.targetColour, colorSpeed);
+		//sticker.children[0].material.emissive.lerp(
+		//new THREE.Color(sticker.targetColour).lerp(new THREE.Color(0x0), 0.4),
+		//colorSpeed,
+		//);
 	}
 
 	controls.update();
