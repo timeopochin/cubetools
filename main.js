@@ -39,7 +39,8 @@ const resetButtons = document.getElementById("reset-buttons");
 // Constants
 const abc = "abcdefghijklmnopqrstluvwxyz";
 const rotateSpeed = 0.15;
-const times = {};
+const allowTwoSideRecognition = false;
+//const times = {};
 const letters = {};
 
 //   CORNERS
@@ -97,6 +98,17 @@ const edgesData = [
 	{ stickers: [ 3, 52], position: 17 },
 	{ stickers: [12, 50], position: 18 },
 	{ stickers: [21, 48], position: 19 },
+];
+
+const adjacentCornerPoss = [
+	[1, 2, 4], // 0 DBL
+	[0, 3, 5], // 1 DBR
+	[0, 3, 6], // 2 DFL
+	[1, 2, 7], // 3 DFR
+	[0, 5, 6], // 4 UBL
+	[1, 4, 7], // 5 UBR
+	[2, 4, 7], // 6 UFL
+	[3, 5, 6], // 7 UFR
 ];
 
 scene.background = grayColour;
@@ -553,7 +565,16 @@ function nextCorner() {
 		stickers[currentCorner.stickers[i]].targetColour =
 			stickers[corner.stickers[(i + twist) % 3]].solvedColour;
 	}
-	positionCounter = currentCorner.position;
+
+	//for (const timeout of timeouts) {
+	//clearTimeout(timeout);
+	let newPos = currentCorner.position;
+	if (allowTwoSideRecognition && [0, 1, 4, 5].includes(newPos)) {
+		newPos += 2;
+		//timeouts.push(setTimeout(() => (positionCounter = newPos - 2), 3000));
+	}
+
+	positionCounter = newPos;
 
 	const relativeTwist = (currentCorner.twist + twist) % 3;
 	const answer = letterScheme[corner.position * 3 + relativeTwist];
