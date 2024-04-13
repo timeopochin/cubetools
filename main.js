@@ -594,9 +594,7 @@ function getRandomCorner() {
 
 function getRandomEdge() {
 	const weights = times.slice(24, 48).map((stickerTimes, index) => {
-		if (
-			currentEdge.position === cornersEdge[24 + Math.floor(index / 2)].position
-		) {
+		if (currentEdge.position === edgesData[Math.floor(index / 2)].position) {
 			return 0;
 		}
 		const [mean, _] = getMeanAndStandardDeviation(stickerTimes);
@@ -606,7 +604,7 @@ function getRandomEdge() {
 	const index = getWeightedRandom(weights);
 	const flip = index % 2;
 
-	return { ...cornersData[24 + Math.floor(index / 2)], flip };
+	return { ...edgesData[Math.floor(index / 2)], flip };
 }
 
 function nextCorner() {
@@ -653,11 +651,11 @@ function nextEdge() {
 
 	for (let i = 0; i < 2; i++) {
 		stickers[currentEdge.stickers[i]].targetColour =
-			stickers[edge.stickers[(i + flip) % 2]].solvedColour;
+			stickers[edge.stickers[(i + edge.flip) % 2]].solvedColour;
 	}
 	positionCounter = currentEdge.position;
 
-	const relativeFlip = currentEdge.flip != flip;
+	const relativeFlip = currentEdge.flip != edge.flip;
 	const index = 24 + (edge.position - 8) * 2 + relativeFlip;
 	const answer = letterScheme[index];
 
