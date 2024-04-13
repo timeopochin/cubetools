@@ -583,7 +583,7 @@ function getRandomCorner() {
 			return 0;
 		}
 		const [mean, _] = getMeanAndStandardDeviation(stickerTimes);
-		return Math.pow(mean || 1000, 2);
+		return mean || 10000;
 	});
 
 	const index = getWeightedRandom(weights);
