@@ -40,8 +40,11 @@ const resetButtons = document.getElementById("reset-buttons");
 const abc = "abcdefghijklmnopqrstluvwxyz";
 const rotateSpeed = 0.15;
 const allowTwoSideRecognition = false;
-//const times = {};
 const letters = {};
+
+// Variables
+let times = [];
+let startTime;
 
 //   CORNERS
 //   0 1 2 3 4 5 6 7 8 9
@@ -100,6 +103,7 @@ const edgesData = [
 	{ stickers: [21, 48], position: 19 },
 ];
 
+/*
 const adjacentCornerPoss = [
 	[1, 2, 4], // 0 DBL
 	[0, 3, 5], // 1 DBR
@@ -110,6 +114,7 @@ const adjacentCornerPoss = [
 	[2, 4, 7], // 6 UFL
 	[3, 5, 6], // 7 UFR
 ];
+*/
 
 scene.background = grayColour;
 
@@ -137,42 +142,49 @@ controls.enableDamping = true;
  * }
  */
 
-/*
-function resetTime(c) {
-	times[c] = [];
-	localStorage.setItem("times-" + c, JSON.stringify(times));
+function resetTime(index) {
+	times[index] = [];
+	localStorage.setItem("times-" + index, JSON.stringify([]));
 }
-/*
 
-/*
 function resetTimes() {
-	for (const c of abc) {
-		resetTime(c)
+	for (let i = 0; i < letterScheme.length; i++) {
+		resetTime(i);
 	}
 }
-*/
 
-/*
 function loadTimes() {
-	for (const c of abc) {
-		times[c] = [];
-		if (!localStorage.hasOwnProperty("times-" + c)) {
-			resetTime();
-			return;
+	times = [];
+	for (let i = 0; i < 48; i++) {
+		if (!localStorage.hasOwnProperty("times-" + i)) {
+			resetTime(i);
+			continue;
 		}
-		times = localStorage.getItem("times");
+		times[i] = JSON.parse(localStorage.getItem("times-" + i));
 	}
 }
-*/
 
-/*
 loadTimes();
 
-function addTime(letter, time) {
-	times[letter].push(time);
-	localStorage.setItem(JSON.stringify(times));
+function addTime(time) {
+	const index = edges ? currentEdge.index : currentCorner.index;
+	times[index].push(time);
+	times[index].sort((a, b) => a - b);
+	localStorage.setItem("times-" + index, JSON.stringify(times[index]));
+
+	//const flat = times.flat();
+	//const mean = flat.reduce((acc, c) => acc + c, 0) / flat.length;
+	//console.log(mean/1000);
 }
-*/
+
+function getMeanAndStandardDeviation(array) {
+	const n = array.length;
+	const mean = array.reduce((a, b) => a + b, 0) / n;
+	const stddev = Math.sqrt(
+		array.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / n,
+	);
+	return [mean, stddev];
+}
 
 // Colours
 function resetColours() {
@@ -514,6 +526,7 @@ let resetTimeout = setTimeout(() => {
 function reset() {
 	orbit = false;
 	letterMaterial.visible = false;
+
 	if (resetTimeout) {
 		clearTimeout(resetTimeout);
 	}
@@ -522,6 +535,10 @@ function reset() {
 			controls.autoRotate = true;
 		}
 	}, 500);
+
+	positionCounter = 20;
+	//controls.autoRotate = true;
+
 	controls.enableRotate = true;
 	playing = false;
 	setModePreview();
@@ -541,12 +558,55 @@ function reset() {
 	currentEdge.answer = letterScheme[43].toUpperCase();
 }
 
+function getWeightedRandom(weights) {
+	let sum = 0;
+	const r = Math.random();
+	const total = weights.reduce((a, c) => a + c || 0, 0);
+	const normalized = weights.map((w) => w / total);
+	for (let i = 0; i < weights.length; i++) {
+		sum += normalized[i];
+		if (r <= sum) {
+			return i;
+		}
+	}
+	console.log("hmm, this code should be unreachable");
+	console.log(weights);
+	console.log(total, normalized);
+	return Math.floor(Math.random() * weights.length);
+}
+
 function getRandomCorner() {
-	return cornersData[randomRange(0, 8)];
+	const weights = times.slice(0, 24).map((stickerTimes, index) => {
+		if (
+			currentCorner.position === cornersData[Math.floor(index / 3)].position
+		) {
+			return 0;
+		}
+		const [mean, _] = getMeanAndStandardDeviation(stickerTimes);
+		return Math.pow(mean || 1000, 2);
+	});
+
+	const index = getWeightedRandom(weights);
+	const twist = index % 3;
+
+	return { ...cornersData[Math.floor(index / 3)], twist };
 }
 
 function getRandomEdge() {
-	return edgesData[randomRange(0, edgesData.length)];
+	const weights = times.slice(24, 48).map((stickerTimes, index) => {
+		if (
+			currentEdge.position === cornersEdge[24 + Math.floor(index / 2)].position
+		) {
+			return 0;
+		}
+		const [mean, _] = getMeanAndStandardDeviation(stickerTimes);
+		return Math.pow(mean || 1000, 2);
+	});
+
+	const index = getWeightedRandom(weights);
+	const flip = index % 2;
+
+	return { ...cornersData[24 + Math.floor(index / 2)], flip };
 }
 
 function nextCorner() {
@@ -554,16 +614,11 @@ function nextCorner() {
 
 	setPiecesGray();
 
-	let corner = getRandomCorner();
-	while (corner.position === currentCorner.position) {
-		corner = getRandomCorner();
-	}
-	const twist = randomRange(0, 3);
-	//const twist = 2;
+	const corner = getRandomCorner();
 
 	for (let i = 0; i < 3; i++) {
 		stickers[currentCorner.stickers[i]].targetColour =
-			stickers[corner.stickers[(i + twist) % 3]].solvedColour;
+			stickers[corner.stickers[(i + corner.twist) % 3]].solvedColour;
 	}
 
 	//for (const timeout of timeouts) {
@@ -576,14 +631,17 @@ function nextCorner() {
 
 	positionCounter = newPos;
 
-	const relativeTwist = (currentCorner.twist + twist) % 3;
-	const answer = letterScheme[corner.position * 3 + relativeTwist];
+	const relativeTwist = (currentCorner.twist + corner.twist) % 3;
+	const index = corner.position * 3 + relativeTwist;
+	const answer = letterScheme[index];
 
 	currentCorner = { ...corner };
 	currentCorner.twist = relativeTwist;
 	currentCorner.answer = answer;
+	currentCorner.index = index;
 
-	console.log(answer);
+	startTime = new Date().getTime();
+	//console.log(answer);
 }
 
 function nextEdge() {
@@ -592,11 +650,6 @@ function nextEdge() {
 	setPiecesGray();
 
 	let edge = getRandomEdge();
-	while (edge.position === currentEdge.position) {
-		edge = getRandomEdge();
-	}
-	const flip = Math.random() < 0.5;
-	//const twist = 2;
 
 	for (let i = 0; i < 2; i++) {
 		stickers[currentEdge.stickers[i]].targetColour =
@@ -605,13 +658,16 @@ function nextEdge() {
 	positionCounter = currentEdge.position;
 
 	const relativeFlip = currentEdge.flip != flip;
-	const answer = letterScheme[24 + (edge.position - 8) * 2 + relativeFlip];
+	const index = 24 + (edge.position - 8) * 2 + relativeFlip;
+	const answer = letterScheme[index];
 
 	currentEdge = { ...edge };
 	currentEdge.flip = relativeFlip;
 	currentEdge.answer = answer;
+	currentEdge.index = index;
 
-	console.log(answer);
+	startTime = new Date().getTime();
+	//console.log(answer);
 }
 
 let playing = false;
@@ -621,6 +677,32 @@ let edges = false;
 let timeouts = [];
 
 document.body.addEventListener("keyup", (e) => {
+	if (playing) {
+		if (e.key === " ") {
+			for (const timeout of timeouts) {
+				clearTimeout(timeout);
+			}
+			timeouts = [];
+			//positionCounter = 20;
+			reset();
+		} else if (
+			(e.key === currentCorner.answer && !edges) ||
+			(e.key === currentEdge.answer && edges)
+		) {
+			const ellapsedTime = new Date().getTime() - startTime;
+			addTime(ellapsedTime);
+			if (edges) {
+				nextEdge();
+			} else {
+				nextCorner();
+			}
+		} else if (abc.includes(e.key)) {
+			scene.background = new THREE.Color(0x862121);
+			setTimeout(() => (scene.background = grayColour), 200);
+		}
+		return;
+	}
+
 	// Input
 	if (selectedSticker) {
 		if (abc.includes(e.key)) {
@@ -640,30 +722,6 @@ document.body.addEventListener("keyup", (e) => {
 		setPiecesSolved();
 
 		bottomIndicator.textContent = "Press SPACE to go back";
-		return;
-	}
-
-	if (playing) {
-		if (e.key === " ") {
-			for (const timeout of timeouts) {
-				clearTimeout(timeout);
-			}
-			timeouts = [];
-			positionCounter = 20;
-			reset();
-		} else if (
-			(e.key === currentCorner.answer && !edges) ||
-			(e.key === currentEdge.answer && edges)
-		) {
-			if (edges) {
-				nextEdge();
-			} else {
-				nextCorner();
-			}
-		} else if (abc.includes(e.key)) {
-			scene.background = new THREE.Color(0x862121);
-			setTimeout(() => (scene.background = grayColour), 200);
-		}
 		return;
 	}
 
@@ -810,6 +868,12 @@ document.getElementById("reset-letter-scheme").addEventListener("click", () => {
 	}
 });
 
+document.getElementById("reset-times").addEventListener("click", () => {
+	if (window.confirm("Are you sure you want to reset the data?")) {
+		resetTimes();
+	}
+});
+
 window.addEventListener("pointermove", (event) => {
 	pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
 	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -827,8 +891,11 @@ function getMouseSticker() {
 	return intersects.length ? intersects[0].object : undefined;
 }
 
-function slerpPosition() {
+function slerpCube() {
 	cube.quaternion.slerp(positions[positionCounter].cube, rotateSpeed);
+}
+
+function slerpCamera() {
 	camera.position.set(0, 0, 0);
 	camera.quaternion.slerp(positions[positionCounter].camera, rotateSpeed);
 	camera.translateZ(30);
@@ -840,8 +907,10 @@ function animate() {
 
 	if (!orbit) {
 		if (playing || !controls.autoRotate) {
-			slerpPosition();
+			slerpCamera();
+			slerpCube();
 		} else {
+			slerpCube();
 			camera.position.set(0, 0, 0);
 			camera.translateZ(30);
 		}
