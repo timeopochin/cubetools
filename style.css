@@ -6,7 +6,7 @@
 
 .indicator {
 	position: absolute;
-	color: #eebbbb;
+	color: #ebb;
 	margin: 1rem 0;
 }
 
@@ -46,4 +46,53 @@ button {
 button:hover {
 	background-color: #ebb;
 	color: #222;
+}
+
+#data-container {
+	right: 0;
+	top: 6rem;
+	position: absolute;
+	text-align: right;
+}
+
+.data-item {
+	position: relative;
+	margin-top: 1px;
+	margin-bottom: 1px;
+	margin-left: auto;
+	font-size: 0.8rem;
+	font-weight: bold;
+	opacity: 0.6;
+}
+
+.corner {
+	background-color: #beb;
+}
+
+.edge {
+	background-color: #bbe;
+}
+
+.seconds-indicator {
+	position: absolute;
+	top: 0;
+	width: 2px;
+	height: 100%;
+	background-color: #ebb;
+}
+
+#one-second-indicator {
+	right: 100px;
+}
+
+#two-second-indicator {
+	right: 200px;
+}
+
+#three-second-indicator {
+	right: 300px;
+}
+
+#four-second-indicator {
+	right: 400px;
 }

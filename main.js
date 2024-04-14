@@ -35,6 +35,7 @@ const colourPicker = document.getElementById("colour-picker");
 const topIndicator = document.getElementById("top-indicator");
 const bottomIndicator = document.getElementById("bottom-indicator");
 const resetButtons = document.getElementById("reset-buttons");
+const dataContainer = document.getElementById("data-container");
 
 // Constants
 const abc = "abcdefghijklmnopqrstluvwxyz";
@@ -153,6 +154,18 @@ function resetTimes() {
 	}
 }
 
+function updateTime(i, mean) {
+	dataContainer.children[i].style.width = Math.floor(mean / 10) + "px";
+}
+
+function updateTimes() {
+	for (let i = 0; i < times.length; i++) {
+		//console.log(times[i]);
+		const [mean, _] = getMeanAndStandardDeviation(times[i]);
+		updateTime(i, mean || 0);
+	}
+}
+
 function loadTimes() {
 	times = [];
 	for (let i = 0; i < 48; i++) {
@@ -165,16 +178,20 @@ function loadTimes() {
 }
 
 loadTimes();
+updateTimes();
 
 function addTime(time) {
 	const index = edges ? currentEdge.index : currentCorner.index;
 	times[index].push(time);
-	times[index].sort((a, b) => a - b);
+	//times[index].sort((a, b) => a - b);
 	localStorage.setItem("times-" + index, JSON.stringify(times[index]));
 
 	//const flat = times.flat();
 	//const mean = flat.reduce((acc, c) => acc + c, 0) / flat.length;
 	//console.log(mean/1000);
+
+	const [mean, _] = getMeanAndStandardDeviation(times[index]);
+	updateTime(index, mean);
 }
 
 function getMeanAndStandardDeviation(array) {
@@ -598,7 +615,7 @@ function getRandomEdge() {
 			return 0;
 		}
 		const [mean, _] = getMeanAndStandardDeviation(stickerTimes);
-		return Math.pow(mean || 1000, 2);
+		return mean || 10000;
 	});
 
 	const index = getWeightedRandom(weights);
@@ -795,7 +812,7 @@ colourPicker.addEventListener("change", (e) => {
 		return;
 	}
 	const newColour = Number("0x" + e.target.value.slice(1));
-	const face = Math.floor(selectedSticker.parent.index / 9);
+	const face = Math.floor(selectedSticker.index / 9);
 	stickerColours[face] = new THREE.Color(newColour);
 
 	let colours = JSON.parse(localStorage.getItem("colourScheme"));
